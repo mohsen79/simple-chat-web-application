@@ -1,0 +1,146 @@
+<html>
+
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.min.js"></script>
+</head>
+
+<body>
+    <input type="text" id="message" onkeyup="typing()" onkeydown="notTyping()" autocomplete="off">
+    <button onclick="sendMessage()">send</button>
+    <p id="p"></p><br>
+    <p id="type"></p>
+    <button onclick="disconnectUser()">disconnect</button>
+    <button onclick="connectUser()">connect</button>
+    <div class="online">
+        <p></p>
+    </div>
+</body>
+
+</html>
+<style>
+    .online {
+        width: 200px;
+        height: 100px;
+        background: pink;
+        float: right;
+        position: relative;
+        top: -70px;
+    }
+</style>
+<script>
+    var socket = io();
+    var type = document.getElementById('type');
+    var inputMessage = document.getElementById('message');
+    var sendButton = document.getElementsByTagName('button')[0];
+    var disconnectButton = document.getElementsByTagName('button')[1];
+    var connectButton = document.getElementsByTagName('button')[2];
+    sendButton.disabled = true;
+    disconnectButton.disabled = true;
+    type.innerHTML = '';
+
+    if (name = prompt('Enter your name')) {
+        socket.emit('userName', name);
+        sendButton.disabled = false;
+        disconnectButton.disabled = false;
+    } else {
+        do {
+            name = prompt('Enter your name');
+        } while (name == null);
+    }
+    socket.on('online', function(users) {
+        let online = document.getElementsByClassName('online')[0];
+        let p = online.children[0];
+        p.innerHTML = users;
+    });
+    socket.on('userName', function(userName) {
+        user = userName;
+    });
+
+    connectButton.style.display = 'none';
+
+
+    function sendMessage() {
+        if (inputMessage.value == null || inputMessage.value == '') {} else {
+            socket.emit('chat.message', inputMessage.value);
+        }
+    }
+    socket.on('chat.message', function(data) {
+        let p = document.createElement('p');
+        if (data.message) {
+            p.style.border = '1px solid black';
+            p.style.padding = '5px';
+            document.body.appendChild(p);
+            let br = document.createElement('br');
+            if (data.message) {
+                p.append(data.username + ' : ' + data.message || '');
+                p.append(br);
+                p.append(br);
+                p.append(data.time);
+            }
+            data.username == name ? p.style.color = 'lightgreen' : p.style.color = 'lightblue';
+            type.innerHTML = '';
+            inputMessage.value = '';
+        }
+    });
+    socket.on('connecting', function(data) {
+        let p = document.createElement('p');
+        document.body.appendChild(p);
+        let br = document.createElement('br');
+        p.append(data.username + ' : ' + data.message);
+        p.append(br);
+        p.style.color = 'green';
+        type.innerHTML = '';
+        inputMessage.value = '';
+    });
+
+    function typing() {
+        socket.emit('typing.message', name);
+    }
+
+    socket.on('typing.message', function(username) {
+        type.innerHTML = "<p><i>" + username + " is typing a message..." + "</i></p>";
+    });
+
+    function notTyping() {
+        socket.emit('notTyping');
+    }
+    socket.on('notTyping', function() {
+        setTimeout(function() {
+            type.innerHTML = '';
+        }, 2000);
+    });
+
+    function disconnectUser() {
+        socket.emit('disconnectUser');
+    }
+    socket.on('chat.disconnect', function(data) {
+        let p = document.createElement('p');
+        document.body.appendChild(p);
+        let br = document.createElement('br');
+        p.append(data.username + ' : ' + data.message);
+        p.append(br);
+        p.style.color = 'red';
+        type.innerHTML = '';
+        inputMessage.value = '';
+    });
+    socket.on('user.disconnect', function(data) {
+        sendButton.disabled = true;
+        disconnectButton.disabled = true;
+        connectButton.style.display = 'block';
+
+    });
+    socket.on('user.disconnect.message', function(data) {
+        let p = document.createElement('p');
+        document.body.appendChild(p);
+        let br = document.createElement('br');
+        p.append(data.username + ' : ' + data.message);
+        p.append(br);
+        p.style.color = 'red';
+        type.innerHTML = '';
+        inputMessage.value = '';
+    });
+
+    function connectUser() {
+        window.location.reload();
+    }
+</script>
